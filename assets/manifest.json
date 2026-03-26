@@ -1,0 +1,28 @@
+{
+  "Name": "Audio Control",
+  "Description": "Control audio streams - cycle through playing audio sources",
+  "Author": "OpenDeck Audio Control",
+  "Version": "0.1.0",
+  "Category": "Audio",
+  "Icon": "icons/plugin",
+  "CodePaths": {
+    "x86_64-unknown-linux-gnu": "x86_64-unknown-linux-gnu/bin/open-deck-audio-control"
+  },
+  "OS": [
+    { "Platform": "linux" }
+  ],
+  "Actions": [
+    {
+      "Name": "Cycle Audio Stream",
+      "UUID": "net.jpreston.opendeck.audio.cycle-stream",
+      "Icon": "icons/cycle-stream",
+      "Tooltip": "Cycles through active audio streams",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "icons/cycle-stream" }
+      ],
+      "SupportedInMultiActions": true,
+      "PropertyInspectorPath": "propertyInspector/cycleAudioStream.html"
+    }
+  ]
+}
