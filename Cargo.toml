@@ -1,9 +1,9 @@
 [package]
-name = "open-deck-audio-control"
+name = "magic-audio-control"
 version = "0.1.0"
 edition = "2021"
-authors = ["OpenDeck Audio Control"]
-description = "OpenDeck plugin for cycling through audio streams via PipeWire"
+authors = ["Jonathan Preston"]
+description = "Magic plugin for cycling through audio streams via PipeWire"
 
 [dependencies]
 openaction = "2.6"
@@ -13,6 +13,14 @@ serde_json = "1"
 anyhow = "1"
 log = "0.4"
 simplelog = "0.12"
+freedesktop = "0.0.3"
+image = "0.25"
+imageproc = "0.25"
+base64 = "0.22"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+urlencoding = "2.1"
+resvg = "0.47"
+ab_glyph = "0.2"
 
 [[bin]]
 name = "open-deck-audio-control"

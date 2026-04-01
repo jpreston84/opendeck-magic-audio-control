@@ -1,13 +1,15 @@
 {
-  "Name": "Audio Control",
-  "Description": "Control audio streams - cycle through playing audio sources",
-  "Author": "OpenDeck Audio Control",
+  "Name": "Magic Audio Control",
+  "Description": "Control audio streams - cycle through playing audio sources and adjust volume",
+  "Author": "Jonathan Preston",
   "Version": "0.1.0",
   "Category": "Audio",
   "Icon": "icons/plugin",
+  "CodePath": "x86_64-unknown-linux-gnu/bin/open-deck-audio-control",
   "CodePaths": {
     "x86_64-unknown-linux-gnu": "x86_64-unknown-linux-gnu/bin/open-deck-audio-control"
   },
+  "CodePathLin": "x86_64-unknown-linux-gnu/bin/open-deck-audio-control",
   "OS": [
     { "Platform": "linux" }
   ],
@@ -19,10 +21,28 @@
       "Tooltip": "Cycles through active audio streams",
       "Controllers": ["Keypad"],
       "States": [
-        { "Image": "icons/cycle-stream" }
+        {
+          "Image": "icons/cycle-stream",
+          "FontSize": 14
+        }
       ],
       "SupportedInMultiActions": true,
       "PropertyInspectorPath": "propertyInspector/cycleAudioStream.html"
+    },
+    {
+      "Name": "Volume Control",
+      "UUID": "net.jpreston.opendeck.audio.volume-control",
+      "Icon": "icons/volume-knob",
+      "Tooltip": "Rotate to adjust volume of selected stream",
+      "Controllers": ["Encoder"],
+      "States": [
+        {
+          "Image": "icons/volume-knob",
+          "FontSize": 16
+        }
+      ],
+      "SupportedInMultiActions": true,
+      "PropertyInspectorPath": "propertyInspector/volumeControl.html"
     }
   ]
 }

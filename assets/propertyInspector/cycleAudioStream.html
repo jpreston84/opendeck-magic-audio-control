@@ -1,149 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cycle Audio Stream</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 12px;
-            background: #1a1a1a;
-            color: #e0e0e0;
-        }
-        .section {
-            margin-bottom: 16px;
-        }
-        .section-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #888;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-        .stream-list {
-            background: #252525;
-            border-radius: 6px;
-            padding: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .stream-item {
-            padding: 8px;
-            border-bottom: 1px solid #333;
-        }
-        .stream-item:last-child {
-            border-bottom: none;
-        }
-        .stream-name {
-            font-weight: 500;
-            color: #fff;
-        }
-        .stream-pid {
-            font-size: 11px;
-            color: #888;
-            margin-top: 2px;
-        }
-        .current-badge {
-            display: inline-block;
-            background: #4a9eff;
-            color: #fff;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin-left: 8px;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        .refresh-btn {
-            background: #4a9eff;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-        .refresh-btn:hover {
-            background: #3a8eef;
-        }
-    </style>
-</head>
-<body>
-    <div class="section">
-        <div class="section-title">Active Audio Streams</div>
-        <div id="streamList" class="stream-list">
-            <div class="empty-state">Loading streams...</div>
-        </div>
-        <button class="refresh-btn" onclick="refreshStreams()">Refresh</button>
-    </div>
-
     <script>
         let websocket = null;
-        let currentSettings = {};
         let context = null;
+        let currentSettings = {};
 
         function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+            console.log("[PI] connectElgatoStreamDeckSocket called, port:", inPort);
+            
+            websocket = new WebSocket("ws://localhost:" + inPort);
             const actionInfo = JSON.parse(inActionInfo);
             context = inPropertyInspectorUUID;
             currentSettings = actionInfo.payload.settings || {};
 
-            websocket = new WebSocket("ws://localhost:" + inPort);
-
-            websocket.onopen = function() {
+            websocket.onopen = () => {
+                console.log("[PI] WebSocket connected");
                 websocket.send(JSON.stringify({
                     event: inRegisterEvent,
                     uuid: inPropertyInspectorUUID,
                 }));
+                console.log("[PI] Sent registration");
             };
 
-            websocket.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                if (message.event === "updateStreams") {
-                    renderStreams(message.streams);
+            websocket.onmessage = (event) => {
+                console.log("[PI] Received message:", event.data);
+                try {
+                    const message = JSON.parse(event.data);
+                    console.log("[PI] Parsed message:", message);
+                    if (message.event === "sendToPropertyInspector" && message.payload) {
+                        const payload = message.payload;
+                        if (payload.event === "updateInfo") {
+                            console.log("[PI] updateInfo received, link_id:", payload.link_id);
+                            document.getElementById("linkId").innerText = payload.link_id || "Not set";
+                            renderStreams(payload.streams);
+                        }
+                    }
+                } catch (e) {
+                    console.error("[PI] Error parsing message:", e);
                 }
+            };
+
+            websocket.onerror = (error) => {
+                console.error("[PI] WebSocket error:", error);
+            };
+
+            websocket.onclose = () => {
+                console.log("[PI] WebSocket closed");
             };
         }
 
         function renderStreams(streams) {
+            console.log("[PI] renderStreams called, streams:", streams);
             const container = document.getElementById("streamList");
-
             if (!streams || streams.length === 0) {
-                container.innerHTML = '<div class="empty-state">No active audio streams found</div>';
+                container.innerHTML = '<div style="padding: 8px; color: #888; font-size: 11px;">No active audio streams</div>';
                 return;
             }
-
-            const currentPid = currentSettings.current_pid;
-
-            container.innerHTML = streams.map(stream => `
-                <div class="stream-item">
-                    <span class="stream-name">${escapeHtml(stream.app_name || stream.name)}</span>
-                    ${stream.pid === currentPid ? '<span class="current-badge">Current</span>' : ''}
-                    <div class="stream-pid">PID: ${stream.pid || 'N/A'} | Node: ${stream.node_id}</div>
-                </div>
-            `).join('');
-        }
-
-        function refreshStreams() {
-            if (websocket && websocket.readyState === WebSocket.OPEN) {
-                websocket.send(JSON.stringify({
-                    event: "sendToPlugin",
-                    context: context,
-                    action: "net.jpreston.opendeck.audio.cycle-stream",
-                    payload: { command: "refresh" }
-                }));
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            const currentNodeId = currentSettings.current_node_id;
+            container.innerHTML = streams.map(s => {
+                const isCurrent = s.node_id === currentNodeId ? ' ✓' : '';
+                return `<div style="padding: 4px 8px; border-bottom: 1px solid #333; font-size: 11px;">${s.app_name || s.name}${isCurrent}</div>`;
+            }).join('');
         }
     </script>
+    <link rel="stylesheet" href="sdpi.css" />
+</head>
+<body>
+    <div class="sdpi-item">
+        <div class="sdpi-item-label">Button ID</div>
+        <div id="linkId" style="padding: 8px; background: #222; border-radius: 4px; font-family: monospace; font-size: 12px;">Loading...</div>
+    </div>
+    <p style="padding: 0.5rem; font-size: 10px; color: #888;">
+        This ID is auto-generated. Use it in a Volume Control knob to link them.
+    </p>
+    <div class="sdpi-item">
+        <div class="sdpi-item-label">Active Streams</div>
+        <div id="streamList" style="background: #222; border-radius: 4px; max-height: 120px; overflow-y: auto;">
+            <div style="padding: 8px; color: #888; font-size: 11px;">Loading...</div>
+        </div>
+    </div>
 </body>
 </html>

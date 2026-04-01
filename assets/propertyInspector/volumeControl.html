@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        let websocket = null;
+        let context = null;
+        let currentSettings = {};
+
+        function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+            console.log("[PI-KNOB] connectElgatoStreamDeckSocket called, port:", inPort);
+            
+            websocket = new WebSocket("ws://localhost:" + inPort);
+            const actionInfo = JSON.parse(inActionInfo);
+            context = inPropertyInspectorUUID;
+            currentSettings = actionInfo.payload.settings || {};
+
+            websocket.onopen = () => {
+                console.log("[PI-KNOB] WebSocket connected");
+                websocket.send(JSON.stringify({
+                    event: inRegisterEvent,
+                    uuid: inPropertyInspectorUUID,
+                }));
+                console.log("[PI-KNOB] Sent registration");
+                loadSettings();
+            };
+
+            websocket.onmessage = (event) => {
+                console.log("[PI-KNOB] Received message:", event.data);
+                try {
+                    const message = JSON.parse(event.data);
+                    console.log("[PI-KNOB] Parsed message:", message);
+                    if (message.event === "sendToPropertyInspector" && message.payload) {
+                        const payload = message.payload;
+                        if (payload.event === "updateButtons") {
+                            console.log("[PI-KNOB] updateButtons received, buttons:", payload.buttons);
+                            renderButtons(payload.buttons, payload.current_link_id);
+                        }
+                    }
+                } catch (e) {
+                    console.error("[PI-KNOB] Error parsing message:", e);
+                }
+            };
+
+            websocket.onerror = (error) => {
+                console.error("[PI-KNOB] WebSocket error:", error);
+            };
+
+            websocket.onclose = () => {
+                console.log("[PI-KNOB] WebSocket closed");
+            };
+        }
+
+        function loadSettings() {
+            const increment = document.getElementById("increment");
+            
+            if (currentSettings.increment !== undefined) {
+                increment.value = currentSettings.increment;
+            } else {
+                increment.value = 5;
+            }
+        }
+
+        function renderButtons(buttons, currentLinkId) {
+            console.log("[PI-KNOB] renderButtons called, buttons:", buttons, "current:", currentLinkId);
+            const select = document.getElementById("buttonSelect");
+            select.innerHTML = '<option value="">-- Select a button --</option>';
+            
+            if (buttons && buttons.length > 0) {
+                buttons.forEach(b => {
+                    const option = document.createElement("option");
+                    option.value = b.link_id;
+                    option.textContent = `${b.link_id} (${b.name})`;
+                    if (b.link_id === currentLinkId) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } else {
+                select.innerHTML = '<option value="">No buttons available</option>';
+            }
+        }
+
+        function update() {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+            
+            const select = document.getElementById("buttonSelect");
+            const increment = document.getElementById("increment");
+            
+            currentSettings.link_id = select.value || null;
+            currentSettings.increment = parseInt(increment.value) || 5;
+            
+            console.log("[PI-KNOB] Sending setSettings:", currentSettings);
+            
+            websocket.send(JSON.stringify({
+                event: "setSettings",
+                context: context,
+                payload: currentSettings,
+            }));
+        }
+    </script>
+    <link rel="stylesheet" href="sdpi.css" />
+</head>
+<body>
+    <div class="sdpi-item">
+        <div class="sdpi-item-label">Linked Button</div>
+        <select id="buttonSelect" onchange="update();" class="sdpi-item-value">
+            <option value="">Loading...</option>
+        </select>
+    </div>
+    <div class="sdpi-item">
+        <div class="sdpi-item-label">Increment</div>
+        <input type="range" id="increment" min="1" max="20" value="5" onchange="update();" class="sdpi-item-value">
+        <span id="incrementValue" style="margin-left: 10px;">5%</span>
+    </div>
+    <p style="padding: 0.5rem; font-size: 10px; color: #888;">
+        Select a Cycle Audio Stream button to control its volume.
+        Rotate knob to adjust volume, press to mute/unmute.
+    </p>
+    <script>
+        document.getElementById("increment").addEventListener("input", function() {
+            document.getElementById("incrementValue").textContent = this.value + "%";
+        });
+    </script>
+</body>
+</html>
